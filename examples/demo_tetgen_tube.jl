@@ -10,7 +10,7 @@ domain.
 
 Ri, Ro = 20.0, 25.0
 L = 80.0
-pointSpacing = 3.0
+pointSpacing = 2.0
 
 E, V, F, CE, Fb,CFb_type = tetgen_tube(Ri, Ro, L, pointSpacing)
 

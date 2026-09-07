@@ -10,9 +10,9 @@ domain.
 
 Ri, Ro = 20.0, 25.0
 L = 80.0
-nθ = 50
-nr = 2
-nz = 5 
+nθ = 30
+nr = 4
+nz = 10
 
 E,V,F,Fb,CFb_type = tettube(Ri, Ro, L, nθ, nr, nz; meshType=3)
 
@@ -62,3 +62,4 @@ end
 slidercontrol(hSlider,ax2)
 
 display(GLMakie.Screen(), fig)
+

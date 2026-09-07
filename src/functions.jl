@@ -10887,22 +10887,15 @@ function hextube(Ri, Ro, L, nθ::Int64, nr::Int64, nz::Int64)
 
     V1 = circlepoints(Ri, nθ)
     V2 = circlepoints(Ro, nθ)
-
     Fb, V = loftlinear(V1, V2; num_steps=nr+1, close_loop=true, face_type=:quad)
-
     N = fill(GeometryBasics.Vec{3,Float64}(0.0, 0.0, 1.0), length(V))
-
     E_hex, V_hex = extrudefaces(Fb, V; extent=L, direction=:positive, num_steps=nz+1, N=N)
-
     F = element2faces(E_hex)
-
     Fb = boundaryfaces(E_hex)
-
     Nb = facenormal(Fb, V_hex)
     c = facecentroid(Fb, V_hex)
 
     Cb = zeros(Int, length(Fb))
-
     for (i, n) in enumerate(Nb)
         d = dot(n, [0.0, 0.0, 1.0])
         if d > 0.5
@@ -10917,11 +10910,8 @@ function hextube(Ri, Ro, L, nθ::Int64, nr::Int64, nz::Int64)
             end
         end
     end
-
     return E_hex, V_hex, F,Fb,Cb
-
 end
-
 
 """
     tettube(Ri, Ro, L, nθ::Int64, nr::Int64, nz::Int64; meshType=1)
@@ -10960,37 +10950,33 @@ and centroid positions.
 """
 function tettube(Ri, Ro, L, nθ::Int64, nr::Int64, nz::Int64;  meshType=1)
 
+    if nθ < 3
+        throw(ArgumentError("nθ is too low. Must be larger than 2"))
+    end 
     V1 = circlepoints(Ri, nθ)
     V2 = circlepoints(Ro, nθ)
-
-    Fb, V = loftlinear(V1, V2; num_steps=nr+1, close_loop=true, face_type=:quad)
-
+    Fb, V = loftlinear(V2, V1; num_steps=nr+1, close_loop=true, face_type=:quad)
     N = fill(GeometryBasics.Vec{3,Float64}(0.0, 0.0, 1.0), length(V))
-
     E_hex, V_hex = extrudefaces(Fb, V; extent=L, direction=:positive, num_steps=nz+1, N=N)
-
     V_tet = V_hex
     E_tet = hex2tet(E_hex, meshType)
     Fb = boundaryfaces(E_tet)
     F = element2faces(E_tet)
-
-
     Nb = facenormal(Fb, V_tet)
     c = facecentroid(Fb, V_tet)
 
     Cb = zeros(Int, length(Fb))
-
     for (i, n) in enumerate(Nb)
         d = dot(n, [0.0, 0.0, 1.0])
         if d > 0.5
-            Cb[i] = 1                                    # bottom, z = 0
+            Cb[i] = 2                                    # top, z = L
         elseif d < -0.5
-            Cb[i] = 2                                    # top,    z = L
+            Cb[i] = 1                                    # bottom, z = 0
         else
             if n[1]*c[i][1] + n[2]*c[i][2] > 0.0
-                Cb[i] = 3                                # inner wall
-            else
                 Cb[i] = 4                                # outer wall
+            else
+                Cb[i] = 3                                # inner wall
             end
         end
     end
@@ -11021,25 +11007,20 @@ function tetgen_tube(Ri, Ro, L, pointSpacing)
 
     n_in = ceil(Int, 2π*Ri/pointSpacing)
     n_out = ceil(Int, 2π*Ro/pointSpacing)
-
     V_in = circlepoints(Ri, n_in)
     V_out = circlepoints(Ro, n_out)
-
     F_wi, V_wi = extrudecurve(V_in; extent=L, direction=:positive, close_loop=true, face_type=:tri)
+    invert_faces!(F_wi)
     F_wo, V_wo = extrudecurve(V_out; extent=L, direction=:positive, close_loop=true, face_type=:tri)
-
-    F_bot, V_bot, _ = regiontrimesh((V_out, V_in), ([1, 2],), (pointSpacing,))
-    F_top = F_bot
-    V_top = V_bot .+ Point{3,Float64}(0.0, 0.0, L)
-
+    F_top, V_top, _ = regiontrimesh((V_out, V_in), ([1, 2],), (pointSpacing,))
+    F_bot = invert_faces(F_top)
+    V_bot = deepcopy(V_top)
+    V_top .+= Point{3,Float64}(0.0, 0.0, L)
     Fb, Vb, Cb = joingeom(F_bot, V_bot, F_top, V_top, F_wi, V_wi, F_wo, V_wo)
     Fb, Vb, _, _ = mergevertices(Fb, Vb; pointSpacing=pointSpacing)
-
     E_tet, V_tet, CE, Fb_out, Cb_out = tetgenmesh(Fb, Vb; facetmarkerlist=Cb, stringOpt="paAqQ")
-
     F = element2faces(E_tet)
-
-    return E_tet, V_tet, F,  CE, Fb_out, Cb_out
+    return E_tet, V_tet, F, CE, Fb_out, Cb_out
 end
 
 #= 
